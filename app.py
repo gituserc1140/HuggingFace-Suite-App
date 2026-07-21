@@ -168,9 +168,13 @@ def hf_post(model: str, payload: dict, api_key: str) -> dict:
             json=payload,
             timeout=60,
         )
-        return {"status": response.status_code, "data": response.json()}
-    except requests.exceptions.ConnectionError as exc:
-        return {"status": 0, "data": f"Connection error – check your network connection and API key. ({exc})"}
+        try:
+            data = response.json()
+        except ValueError:
+            data = response.text
+        return {"status": response.status_code, "data": data}
+    except requests.exceptions.ConnectionError:
+        return {"status": 0, "data": "Connection error – check your network connection and API key."}
     except requests.exceptions.Timeout:
         return {"status": 0, "data": "Request timed out. The model may be loading; please try again in a moment."}
     except requests.exceptions.RequestException as exc:
