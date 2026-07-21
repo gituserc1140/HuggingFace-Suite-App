@@ -206,7 +206,7 @@ def tab_sentiment(api_key: str) -> None:
                     top = top[0]
                 label = top.get("label", "N/A")
                 score = top.get("score", 0)
-                show_result(f"{label}  (confidence: {score:.1%})")
+                show_result(f"{label} (confidence: {score:.1%})")
             else:
                 show_result(str(data))
         else:
@@ -369,7 +369,6 @@ def main() -> None:
     )
     st.sidebar.markdown(
         "Get a free key at [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens).",
-        unsafe_allow_html=False,
     )
 
     stripped = api_key_input.strip()
@@ -378,7 +377,6 @@ def main() -> None:
     if not api_key:
         st.warning(
             "Please enter your Hugging Face API key in the sidebar to get started.",
-            icon=None,
         )
         st.stop()
 
