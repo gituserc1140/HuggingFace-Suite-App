@@ -159,7 +159,27 @@ def get_configured_api_key() -> str:
 
 
 def make_client(api_key: str) -> InferenceClient:
-    return InferenceClient(token=api_key)
+    if st.session_state.get("_hf_client_key") != api_key:
+        st.session_state["_hf_client"] = InferenceClient(token=api_key)
+        st.session_state["_hf_client_key"] = api_key
+    return st.session_state["_hf_client"]
+
+
+def _handle_hf_error(exc: Exception) -> None:
+    if isinstance(exc, HfHubHTTPError) and exc.response is not None:
+        status = exc.response.status_code
+        if status == 401:
+            show_error("Authentication failed – please check your Hugging Face API key.")
+            return
+        if status == 403:
+            show_error("Access forbidden – your API key may lack the required permissions.")
+            return
+        if status == 503:
+            show_error("The model is still loading on the server. Please wait a moment and try again.")
+            return
+        show_error(f"API error {status}: {exc}")
+        return
+    show_error(str(exc))
 
 
 def show_result(text: str) -> None:
@@ -193,10 +213,8 @@ def tab_sentiment(api_key: str) -> None:
                 )
                 top = results[0]
                 show_result(f"{top.label} (confidence: {top.score:.1%})")
-            except HfHubHTTPError as exc:
-                show_error(f"API error: {exc}")
             except Exception as exc:
-                show_error(str(exc))
+                _handle_hf_error(exc)
 
 
 def tab_generation(api_key: str) -> None:
@@ -216,10 +234,8 @@ def tab_generation(api_key: str) -> None:
                     max_new_tokens=max_tokens,
                 )
                 show_result(generated)
-            except HfHubHTTPError as exc:
-                show_error(f"API error: {exc}")
             except Exception as exc:
-                show_error(str(exc))
+                _handle_hf_error(exc)
 
 
 def tab_summarization(api_key: str) -> None:
@@ -246,10 +262,8 @@ def tab_summarization(api_key: str) -> None:
                 client = make_client(api_key)
                 result = client.summarization(article, model="facebook/bart-large-cnn")
                 show_result(result.summary_text)
-            except HfHubHTTPError as exc:
-                show_error(f"API error: {exc}")
             except Exception as exc:
-                show_error(str(exc))
+                _handle_hf_error(exc)
 
 
 def tab_translation(api_key: str) -> None:
@@ -264,10 +278,8 @@ def tab_translation(api_key: str) -> None:
                 client = make_client(api_key)
                 result = client.translation(text, model="Helsinki-NLP/opus-mt-en-fr")
                 show_result(result.translation_text)
-            except HfHubHTTPError as exc:
-                show_error(f"API error: {exc}")
             except Exception as exc:
-                show_error(str(exc))
+                _handle_hf_error(exc)
 
 
 def tab_qa(api_key: str) -> None:
@@ -296,10 +308,8 @@ def tab_qa(api_key: str) -> None:
                     model="deepset/roberta-base-squad2",
                 )
                 show_result(result.answer)
-            except HfHubHTTPError as exc:
-                show_error(f"API error: {exc}")
             except Exception as exc:
-                show_error(str(exc))
+                _handle_hf_error(exc)
 
 
 def main() -> None:
