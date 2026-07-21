@@ -209,7 +209,7 @@ def tab_sentiment(api_key: str) -> None:
                 client = make_client(api_key)
                 results = client.text_classification(
                     text,
-                    model="distilbert-base-uncased-finetuned-sst-2-english",
+                    model="distilbert/distilbert-base-uncased-finetuned-sst-2-english",
                 )
                 top = results[0]
                 show_result(f"{top.label} (confidence: {top.score:.1%})")
@@ -230,7 +230,7 @@ def tab_generation(api_key: str) -> None:
                 client = make_client(api_key)
                 generated = client.text_generation(
                     prompt,
-                    model="gpt2",
+                    model="openai-community/gpt2",
                     max_new_tokens=max_tokens,
                 )
                 show_result(generated)
