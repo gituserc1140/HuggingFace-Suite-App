@@ -170,11 +170,11 @@ def hf_post(model: str, payload: dict, api_key: str) -> dict:
         )
         try:
             data = response.json()
-        except ValueError:
+        except requests.exceptions.JSONDecodeError:
             data = response.text
         return {"status": response.status_code, "data": data}
     except requests.exceptions.ConnectionError:
-        return {"status": 0, "data": "Connection error – check your network connection and API key."}
+        return {"status": 0, "data": "Connection error – unable to reach the Hugging Face API. Check your network connection."}
     except requests.exceptions.Timeout:
         return {"status": 0, "data": "Request timed out. The model may be loading; please try again in a moment."}
     except requests.exceptions.RequestException as exc:
