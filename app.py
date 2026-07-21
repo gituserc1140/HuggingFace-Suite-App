@@ -161,13 +161,24 @@ def get_configured_api_key() -> str:
 
 def hf_post(model: str, payload: dict, api_key: str) -> dict:
     headers = {"Authorization": "Bearer " + api_key}
-    response = requests.post(
-        f"{HF_API_URL}{model}",
-        headers=headers,
-        json=payload,
-        timeout=60,
-    )
-    return {"status": response.status_code, "data": response.json()}
+    try:
+        response = requests.post(
+            f"{HF_API_URL}{model}",
+            headers=headers,
+            json=payload,
+            timeout=60,
+        )
+        try:
+            data = response.json()
+        except requests.exceptions.JSONDecodeError:
+            data = response.text
+        return {"status": response.status_code, "data": data}
+    except requests.exceptions.ConnectionError:
+        return {"status": 0, "data": "Connection error – unable to reach the Hugging Face API. Check your network connection."}
+    except requests.exceptions.Timeout:
+        return {"status": 0, "data": "Request timed out. The model may be loading; please try again in a moment."}
+    except requests.exceptions.RequestException as exc:
+        return {"status": 0, "data": str(exc)}
 
 
 def show_result(text: str) -> None:
