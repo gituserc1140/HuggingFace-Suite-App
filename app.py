@@ -158,11 +158,9 @@ def get_configured_api_key() -> str:
     return os.getenv("HUGGINGFACE_API_KEY", "")
 
 
+@st.cache_resource
 def make_client(api_key: str) -> InferenceClient:
-    if st.session_state.get("_hf_client_key") != api_key:
-        st.session_state["_hf_client"] = InferenceClient(token=api_key)
-        st.session_state["_hf_client_key"] = api_key
-    return st.session_state["_hf_client"]
+    return InferenceClient(token=api_key)
 
 
 def _handle_hf_error(exc: Exception) -> None:
