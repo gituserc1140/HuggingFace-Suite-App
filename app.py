@@ -1,10 +1,9 @@
 import html
 import os
 
-import requests
 import streamlit as st
-
-HF_API_URL = "https://api-inference.huggingface.co/models/"
+from huggingface_hub import InferenceClient
+from huggingface_hub.errors import HfHubHTTPError
 
 GITHUB_REPO_URL = "https://github.com/gituserc1140/HuggingFace-Suite-App"
 GITHUB_SPONSORS_URL = "https://github.com/sponsors/gituserc1140"
@@ -159,26 +158,8 @@ def get_configured_api_key() -> str:
     return os.getenv("HUGGINGFACE_API_KEY", "")
 
 
-def hf_post(model: str, payload: dict, api_key: str) -> dict:
-    headers = {"Authorization": "Bearer " + api_key}
-    try:
-        response = requests.post(
-            f"{HF_API_URL}{model}",
-            headers=headers,
-            json=payload,
-            timeout=60,
-        )
-        try:
-            data = response.json()
-        except requests.exceptions.JSONDecodeError:
-            data = response.text
-        return {"status": response.status_code, "data": data}
-    except requests.exceptions.ConnectionError:
-        return {"status": 0, "data": "Connection error – unable to reach the Hugging Face API. Check your network connection."}
-    except requests.exceptions.Timeout:
-        return {"status": 0, "data": "Request timed out. The model may be loading; please try again in a moment."}
-    except requests.exceptions.RequestException as exc:
-        return {"status": 0, "data": str(exc)}
+def make_client(api_key: str) -> InferenceClient:
+    return InferenceClient(token=api_key)
 
 
 def show_result(text: str) -> None:
@@ -204,24 +185,18 @@ def tab_sentiment(api_key: str) -> None:
             st.warning("Please enter some text first.")
             return
         with st.spinner("Analysing…"):
-            result = hf_post(
-                "distilbert-base-uncased-finetuned-sst-2-english",
-                {"inputs": text},
-                api_key,
-            )
-        if result["status"] == 200:
-            data = result["data"]
-            if isinstance(data, list) and data:
-                top = data[0]
-                if isinstance(top, list):
-                    top = top[0]
-                label = top.get("label", "N/A")
-                score = top.get("score", 0)
-                show_result(f"{label} (confidence: {score:.1%})")
-            else:
-                show_result(str(data))
-        else:
-            show_error(f"API error {result['status']}: {result['data']}")
+            try:
+                client = make_client(api_key)
+                results = client.text_classification(
+                    text,
+                    model="distilbert-base-uncased-finetuned-sst-2-english",
+                )
+                top = results[0]
+                show_result(f"{top.label} (confidence: {top.score:.1%})")
+            except HfHubHTTPError as exc:
+                show_error(f"API error: {exc}")
+            except Exception as exc:
+                show_error(str(exc))
 
 
 def tab_generation(api_key: str) -> None:
@@ -233,17 +208,18 @@ def tab_generation(api_key: str) -> None:
             st.warning("Please enter a prompt first.")
             return
         with st.spinner("Generating…"):
-            result = hf_post(
-                "gpt2",
-                {"inputs": prompt, "parameters": {"max_new_tokens": max_tokens}},
-                api_key,
-            )
-        if result["status"] == 200:
-            data = result["data"]
-            generated = data[0].get("generated_text", str(data)) if isinstance(data, list) else str(data)
-            show_result(generated)
-        else:
-            show_error(f"API error {result['status']}: {result['data']}")
+            try:
+                client = make_client(api_key)
+                generated = client.text_generation(
+                    prompt,
+                    model="gpt2",
+                    max_new_tokens=max_tokens,
+                )
+                show_result(generated)
+            except HfHubHTTPError as exc:
+                show_error(f"API error: {exc}")
+            except Exception as exc:
+                show_error(str(exc))
 
 
 def tab_summarization(api_key: str) -> None:
@@ -266,17 +242,14 @@ def tab_summarization(api_key: str) -> None:
             st.warning("Please paste some text first.")
             return
         with st.spinner("Summarising…"):
-            result = hf_post(
-                "facebook/bart-large-cnn",
-                {"inputs": article},
-                api_key,
-            )
-        if result["status"] == 200:
-            data = result["data"]
-            summary = data[0].get("summary_text", str(data)) if isinstance(data, list) else str(data)
-            show_result(summary)
-        else:
-            show_error(f"API error {result['status']}: {result['data']}")
+            try:
+                client = make_client(api_key)
+                result = client.summarization(article, model="facebook/bart-large-cnn")
+                show_result(result.summary_text)
+            except HfHubHTTPError as exc:
+                show_error(f"API error: {exc}")
+            except Exception as exc:
+                show_error(str(exc))
 
 
 def tab_translation(api_key: str) -> None:
@@ -287,19 +260,14 @@ def tab_translation(api_key: str) -> None:
             st.warning("Please enter some text first.")
             return
         with st.spinner("Translating…"):
-            result = hf_post(
-                "Helsinki-NLP/opus-mt-en-fr",
-                {"inputs": text},
-                api_key,
-            )
-        if result["status"] == 200:
-            data = result["data"]
-            translation = (
-                data[0].get("translation_text", str(data)) if isinstance(data, list) else str(data)
-            )
-            show_result(translation)
-        else:
-            show_error(f"API error {result['status']}: {result['data']}")
+            try:
+                client = make_client(api_key)
+                result = client.translation(text, model="Helsinki-NLP/opus-mt-en-fr")
+                show_result(result.translation_text)
+            except HfHubHTTPError as exc:
+                show_error(f"API error: {exc}")
+            except Exception as exc:
+                show_error(str(exc))
 
 
 def tab_qa(api_key: str) -> None:
@@ -320,17 +288,18 @@ def tab_qa(api_key: str) -> None:
             st.warning("Please provide both a context and a question.")
             return
         with st.spinner("Finding answer…"):
-            result = hf_post(
-                "deepset/roberta-base-squad2",
-                {"inputs": {"question": question, "context": context}},
-                api_key,
-            )
-        if result["status"] == 200:
-            data = result["data"]
-            answer = data.get("answer", str(data)) if isinstance(data, dict) else str(data)
-            show_result(answer)
-        else:
-            show_error(f"API error {result['status']}: {result['data']}")
+            try:
+                client = make_client(api_key)
+                result = client.question_answering(
+                    question=question,
+                    context=context,
+                    model="deepset/roberta-base-squad2",
+                )
+                show_result(result.answer)
+            except HfHubHTTPError as exc:
+                show_error(f"API error: {exc}")
+            except Exception as exc:
+                show_error(str(exc))
 
 
 def main() -> None:
