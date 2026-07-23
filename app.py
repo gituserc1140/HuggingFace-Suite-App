@@ -7,6 +7,8 @@ from huggingface_hub.errors import HfHubHTTPError
 
 GITHUB_REPO_URL = "https://github.com/gituserc1140/HuggingFace-Suite-App"
 GITHUB_SPONSORS_URL = "https://github.com/sponsors/gituserc1140"
+LOW_CONFIDENCE_THRESHOLD = 0.2
+MAX_DISPLAYED_KEYWORDS = 15
 
 _CSS = """
 <style>
@@ -299,13 +301,13 @@ def tab_translation(api_key: str) -> None:
         "Italian": "Helsinki-NLP/opus-mt-en-it",
         "Portuguese": "Helsinki-NLP/opus-mt-en-pt",
     }
+    st.markdown("Translate text **from English** into your selected target language.")
     target_language = st.selectbox(
         "Target language",
         list(language_options.keys()),
         index=0,
         key="tr_lang",
     )
-    st.markdown(f"Translate text **from English to {target_language}** using Helsinki-NLP.")
     text = st.text_area("Enter English text:", "Hello, how are you today?", key="tr_input")
     if st.button("Translate", key="tr_btn"):
         if not text.strip():
@@ -347,11 +349,11 @@ def tab_qa(api_key: str) -> None:
                     model="deepset/roberta-base-squad2",
                 )
                 answer = (result.answer or "").strip()
-                confidence = float(getattr(result, "score", 0.0) or 0.0)
+                confidence = float(getattr(result, "score", 0.0))
                 if not answer:
                     st.warning("No strong answer was found in the provided context.")
                     return
-                if confidence < 0.2:
+                if confidence < LOW_CONFIDENCE_THRESHOLD:
                     st.warning("Low-confidence answer — consider adding more context or clarifying the question.")
                 show_result(f"{answer}\n\nConfidence: {confidence:.1%}")
             except Exception as exc:
@@ -391,7 +393,7 @@ def tab_entities(api_key: str) -> None:
                     label = str(
                         getattr(entity, "entity_group", getattr(entity, "entity", "ENTITY")),
                     ).strip()
-                    score = float(getattr(entity, "score", 0.0) or 0.0)
+                    score = float(getattr(entity, "score", 0.0))
                     if not word:
                         continue
                     lines.append(f"- {word} ({label}, confidence: {score:.1%})")
@@ -406,7 +408,7 @@ def tab_entities(api_key: str) -> None:
                     seen.add(normalized)
                     unique_keywords.append(keyword)
 
-                keyword_text = ", ".join(unique_keywords[:15])
+                keyword_text = ", ".join(unique_keywords[:MAX_DISPLAYED_KEYWORDS])
                 details = "\n".join(lines)
                 if keyword_text:
                     details += f"\n\nKeywords: {keyword_text}"
