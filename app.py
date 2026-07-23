@@ -189,8 +189,9 @@ def show_result(text: str) -> None:
 
 
 def show_error(message: str) -> None:
+    text = str(message).strip() or "An unexpected error occurred. Please try again."
     st.markdown(
-        f'<div class="error-card">⚠️ {html.escape(str(message))}</div>',
+        f'<div class="error-card">⚠️ {html.escape(text)}</div>',
         unsafe_allow_html=True,
     )
 
@@ -228,7 +229,7 @@ def tab_generation(api_key: str) -> None:
                 client = make_client(api_key)
                 generated = client.text_generation(
                     prompt,
-                    model="openai-community/gpt2",
+                    model="gpt2",
                     max_new_tokens=max_tokens,
                 )
                 show_result(generated)
