@@ -7,7 +7,7 @@ from huggingface_hub.errors import HfHubHTTPError
 
 GITHUB_REPO_URL = "https://github.com/gituserc1140/HuggingFace-Suite-App"
 GITHUB_SPONSORS_URL = "https://github.com/sponsors/gituserc1140"
-LOW_CONFIDENCE_THRESHOLD = 0.2
+LOW_CONFIDENCE_THRESHOLD = 0.35
 MAX_DISPLAYED_KEYWORDS = 15
 
 _CSS = """
@@ -394,9 +394,9 @@ def tab_entities(api_key: str) -> None:
                 keywords = []
                 for entity in entities:
                     word = str(getattr(entity, "word", "")).strip()
-                    label = str(
-                        getattr(entity, "entity_group", getattr(entity, "entity", "ENTITY")),
-                    ).strip()
+                    entity_group = getattr(entity, "entity_group", None)
+                    entity_name = getattr(entity, "entity", None)
+                    label = str(entity_group or entity_name or "ENTITY").strip()
                     score = float(getattr(entity, "score", 0.0))
                     if not word:
                         continue
@@ -411,9 +411,12 @@ def tab_entities(api_key: str) -> None:
                     seen.add(keyword)
                     unique_keywords.append(keyword)
 
-                keyword_text = ", ".join(unique_keywords[:MAX_DISPLAYED_KEYWORDS])
+                shown_keywords = unique_keywords[:MAX_DISPLAYED_KEYWORDS]
+                keyword_text = ", ".join(shown_keywords)
                 details = "\n".join(lines)
                 if keyword_text:
+                    if len(unique_keywords) > MAX_DISPLAYED_KEYWORDS:
+                        keyword_text += f" (showing first {MAX_DISPLAYED_KEYWORDS})"
                     details += f"\n\nKeywords: {keyword_text}"
                 show_result(details)
             except Exception as exc:
