@@ -11,11 +11,11 @@ A **Streamlit** web app that gives you a suite of NLP tools powered by the [Hugg
 
 | Tab | Task | Model |
 |-----|------|-------|
-| 😊 Sentiment | Positive / negative classification | `distilbert-base-uncased-finetuned-sst-2-english` |
-| ✍️ Generation | Open-ended text generation | `gpt2` |
-| 📝 Summarise | Condense long articles | `facebook/bart-large-cnn` |
-| 🌐 Translate | English → French translation | `Helsinki-NLP/opus-mt-en-fr` |
-| ❓ Q&A | Answer questions from a passage | `deepset/roberta-base-squad2` |
+| 😊 Sentiment | Positive/negative sentiment or emotion classification (mode-dependent) | `distilbert-base-uncased-finetuned-sst-2-english`, `j-hartmann/emotion-english-distilroberta-base` |
+| 📝 Summarise | Condense long articles (short / medium / detailed) | `facebook/bart-large-cnn` |
+| 🌐 Translate | English → French / Spanish / German / Italian / Portuguese | `Helsinki-NLP/opus-mt-en-*` |
+| ❓ Q&A | Answer questions from a passage with confidence | `deepset/roberta-base-squad2` |
+| 🏷️ Entities | Named entity and keyword extraction | `dslim/bert-base-NER` |
 
 ---
 

@@ -7,6 +7,20 @@ from huggingface_hub.errors import HfHubHTTPError
 
 GITHUB_REPO_URL = "https://github.com/gituserc1140/HuggingFace-Suite-App"
 GITHUB_SPONSORS_URL = "https://github.com/sponsors/gituserc1140"
+LOW_CONFIDENCE_THRESHOLD = 0.35
+MAX_DISPLAYED_KEYWORDS = 15
+SUMMARY_LENGTH_SETTINGS = {
+    "Short": (20, 60),
+    "Medium": (40, 110),
+    "Detailed": (80, 180),
+}
+TRANSLATION_TARGET_MODELS = {
+    "French": "Helsinki-NLP/opus-mt-en-fr",
+    "Spanish": "Helsinki-NLP/opus-mt-en-es",
+    "German": "Helsinki-NLP/opus-mt-en-de",
+    "Italian": "Helsinki-NLP/opus-mt-en-it",
+    "Portuguese": "Helsinki-NLP/opus-mt-en-pt",
+}
 
 _CSS = """
 <style>
@@ -197,7 +211,12 @@ def show_error(message: str) -> None:
 
 
 def tab_sentiment(api_key: str) -> None:
-    st.markdown("Classify the **sentiment** of any text (positive / negative).")
+    st.markdown("Classify text by **sentiment** or **emotion**.")
+    mode = st.selectbox(
+        "Analysis mode",
+        ["Positive / Negative", "Emotion labels"],
+        key="sa_mode",
+    )
     text = st.text_area("Enter text:", "I absolutely love this product!", key="sa_input")
     if st.button("Analyse Sentiment", key="sa_btn"):
         if not text.strip():
@@ -206,9 +225,13 @@ def tab_sentiment(api_key: str) -> None:
         with st.spinner("Analysing…"):
             try:
                 client = make_client(api_key)
+                if mode == "Emotion labels":
+                    model = "j-hartmann/emotion-english-distilroberta-base"
+                else:
+                    model = "distilbert/distilbert-base-uncased-finetuned-sst-2-english"
                 results = client.text_classification(
                     text,
-                    model="distilbert/distilbert-base-uncased-finetuned-sst-2-english",
+                    model=model,
                 )
                 top = results[0]
                 show_result(f"{top.label} (confidence: {top.score:.1%})")
@@ -239,6 +262,12 @@ def tab_generation(api_key: str) -> None:
 
 def tab_summarization(api_key: str) -> None:
     st.markdown("Generate a concise **summary** of a longer passage.")
+    length_choice = st.select_slider(
+        "Summary length",
+        options=["Short", "Medium", "Detailed"],
+        value="Medium",
+        key="sum_length",
+    )
     article = st.text_area(
         "Paste your article or text:",
         (
@@ -259,14 +288,26 @@ def tab_summarization(api_key: str) -> None:
         with st.spinner("Summarising…"):
             try:
                 client = make_client(api_key)
-                result = client.summarization(article, model="facebook/bart-large-cnn")
+                min_length, max_length = SUMMARY_LENGTH_SETTINGS[length_choice]
+                result = client.summarization(
+                    article,
+                    model="facebook/bart-large-cnn",
+                    min_length=min_length,
+                    max_length=max_length,
+                )
                 show_result(result.summary_text)
             except Exception as exc:
                 _handle_hf_error(exc)
 
 
 def tab_translation(api_key: str) -> None:
-    st.markdown("Translate text **from English to French** using Helsinki-NLP.")
+    st.markdown("Translate text **from English** into your selected target language.")
+    target_language = st.selectbox(
+        "Target language",
+        list(TRANSLATION_TARGET_MODELS.keys()),
+        index=0,
+        key="tr_lang",
+    )
     text = st.text_area("Enter English text:", "Hello, how are you today?", key="tr_input")
     if st.button("Translate", key="tr_btn"):
         if not text.strip():
@@ -275,7 +316,8 @@ def tab_translation(api_key: str) -> None:
         with st.spinner("Translating…"):
             try:
                 client = make_client(api_key)
-                result = client.translation(text, model="Helsinki-NLP/opus-mt-en-fr")
+                model = TRANSLATION_TARGET_MODELS[target_language]
+                result = client.translation(text, model=model)
                 show_result(result.translation_text)
             except Exception as exc:
                 _handle_hf_error(exc)
@@ -306,7 +348,73 @@ def tab_qa(api_key: str) -> None:
                     context=context,
                     model="deepset/roberta-base-squad2",
                 )
-                show_result(result.answer)
+                raw_answer = getattr(result, "answer", "")
+                answer = str(raw_answer).strip() if raw_answer is not None else ""
+                confidence = float(getattr(result, "score", 0.0))
+                if not answer:
+                    st.warning("No strong answer was found in the provided context.")
+                    return
+                if confidence < LOW_CONFIDENCE_THRESHOLD:
+                    st.warning("Low-confidence answer — consider adding more context or clarifying the question.")
+                show_result(f"{answer}\n\nConfidence: {confidence:.1%}")
+            except Exception as exc:
+                _handle_hf_error(exc)
+
+
+def tab_entities(api_key: str) -> None:
+    st.markdown("Extract **named entities and keywords** from your text.")
+    text = st.text_area(
+        "Enter text:",
+        (
+            "Apple CEO Tim Cook visited Paris to discuss AI partnerships with "
+            "European startups and researchers."
+        ),
+        key="ner_input",
+    )
+    if st.button("Extract Entities", key="ner_btn"):
+        if not text.strip():
+            st.warning("Please enter some text first.")
+            return
+        with st.spinner("Extracting entities…"):
+            try:
+                client = make_client(api_key)
+                entities = client.token_classification(
+                    text,
+                    model="dslim/bert-base-NER",
+                    aggregation_strategy="simple",
+                )
+                if not entities:
+                    st.warning("No named entities were detected.")
+                    return
+
+                lines = []
+                keywords = []
+                for entity in entities:
+                    word = str(getattr(entity, "word", "")).strip()
+                    entity_group = getattr(entity, "entity_group", None)
+                    entity_name = getattr(entity, "entity", None)
+                    label = str(entity_group or entity_name or "ENTITY").strip()
+                    score = float(getattr(entity, "score", 0.0))
+                    if not word:
+                        continue
+                    lines.append(f"- {word} ({label}, confidence: {score:.1%})")
+                    keywords.append(word.lower())
+
+                unique_keywords = []
+                seen_keywords = set()
+                for keyword in keywords:
+                    if keyword in seen_keywords:
+                        continue
+                    seen_keywords.add(keyword)
+                    unique_keywords.append(keyword)
+                shown_keywords = unique_keywords[:MAX_DISPLAYED_KEYWORDS]
+                keyword_text = ", ".join(shown_keywords)
+                details = "\n".join(lines)
+                if keyword_text:
+                    if len(unique_keywords) > MAX_DISPLAYED_KEYWORDS:
+                        keyword_text += f" (showing first {MAX_DISPLAYED_KEYWORDS})"
+                    details += f"\n\nKeywords: {keyword_text}"
+                show_result(details)
             except Exception as exc:
                 _handle_hf_error(exc)
 
@@ -370,7 +478,7 @@ def main() -> None:
         st.stop()
 
     # ── Task tabs ──────────────────────────────────────────────────
-    tabs = st.tabs(["😊 Sentiment", "📝 Summarise", "🌐 Translate", "❓ Q&A"])
+    tabs = st.tabs(["😊 Sentiment", "📝 Summarise", "🌐 Translate", "❓ Q&A", "🏷️ Entities"])
 
     with tabs[0]:
         tab_sentiment(api_key)
@@ -380,6 +488,8 @@ def main() -> None:
         tab_translation(api_key)
     with tabs[3]:
         tab_qa(api_key)
+    with tabs[4]:
+        tab_entities(api_key)
 
 
 if __name__ == "__main__":
