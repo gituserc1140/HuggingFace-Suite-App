@@ -400,10 +400,7 @@ def tab_entities(api_key: str) -> None:
                     lines.append(f"- {word} ({label}, confidence: {score:.1%})")
                     keywords.append(word.lower())
 
-                unique_keywords = []
-                for keyword in keywords:
-                    if keyword not in unique_keywords:
-                        unique_keywords.append(keyword)
+                unique_keywords = list(dict.fromkeys(keywords))
                 shown_keywords = unique_keywords[:MAX_DISPLAYED_KEYWORDS]
                 keyword_text = ", ".join(shown_keywords)
                 details = "\n".join(lines)
