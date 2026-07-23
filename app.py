@@ -19,7 +19,7 @@ TRANSLATION_TARGET_MODELS = {
     "Spanish": "Helsinki-NLP/opus-mt-en-es",
     "German": "Helsinki-NLP/opus-mt-en-de",
     "Italian": "Helsinki-NLP/opus-mt-en-it",
-    "Portuguese": "Helsinki-NLP/opus-mt-en-pt",
+    "Portuguese": "Helsinki-NLP/opus-mt-tc-big-en-pt",
 }
 
 _CSS = """
@@ -292,8 +292,7 @@ def tab_summarization(api_key: str) -> None:
                 result = client.summarization(
                     article,
                     model="facebook/bart-large-cnn",
-                    min_length=min_length,
-                    max_length=max_length,
+                    parameters={"min_length": min_length, "max_length": max_length},
                 )
                 show_result(result.summary_text)
             except Exception as exc:
