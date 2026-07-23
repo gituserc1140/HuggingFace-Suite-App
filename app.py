@@ -9,6 +9,18 @@ GITHUB_REPO_URL = "https://github.com/gituserc1140/HuggingFace-Suite-App"
 GITHUB_SPONSORS_URL = "https://github.com/sponsors/gituserc1140"
 LOW_CONFIDENCE_THRESHOLD = 0.35
 MAX_DISPLAYED_KEYWORDS = 15
+SUMMARY_LENGTH_SETTINGS = {
+    "Short": (20, 60),
+    "Medium": (40, 110),
+    "Detailed": (80, 180),
+}
+TRANSLATION_LANGUAGE_MODELS = {
+    "French": "Helsinki-NLP/opus-mt-en-fr",
+    "Spanish": "Helsinki-NLP/opus-mt-en-es",
+    "German": "Helsinki-NLP/opus-mt-en-de",
+    "Italian": "Helsinki-NLP/opus-mt-en-it",
+    "Portuguese": "Helsinki-NLP/opus-mt-en-pt",
+}
 
 _CSS = """
 <style>
@@ -276,12 +288,7 @@ def tab_summarization(api_key: str) -> None:
         with st.spinner("Summarising…"):
             try:
                 client = make_client(api_key)
-                length_settings = {
-                    "Short": (20, 60),
-                    "Medium": (40, 110),
-                    "Detailed": (80, 180),
-                }
-                min_length, max_length = length_settings[length_choice]
+                min_length, max_length = SUMMARY_LENGTH_SETTINGS[length_choice]
                 result = client.summarization(
                     article,
                     model="facebook/bart-large-cnn",
@@ -294,17 +301,10 @@ def tab_summarization(api_key: str) -> None:
 
 
 def tab_translation(api_key: str) -> None:
-    language_options = {
-        "French": "Helsinki-NLP/opus-mt-en-fr",
-        "Spanish": "Helsinki-NLP/opus-mt-en-es",
-        "German": "Helsinki-NLP/opus-mt-en-de",
-        "Italian": "Helsinki-NLP/opus-mt-en-it",
-        "Portuguese": "Helsinki-NLP/opus-mt-en-pt",
-    }
     st.markdown("Translate text **from English** into your selected target language.")
     target_language = st.selectbox(
         "Target language",
-        list(language_options.keys()),
+        list(TRANSLATION_LANGUAGE_MODELS.keys()),
         index=0,
         key="tr_lang",
     )
@@ -316,7 +316,7 @@ def tab_translation(api_key: str) -> None:
         with st.spinner("Translating…"):
             try:
                 client = make_client(api_key)
-                model = language_options[target_language]
+                model = TRANSLATION_LANGUAGE_MODELS[target_language]
                 result = client.translation(text, model=model)
                 show_result(result.translation_text)
             except Exception as exc:
@@ -403,13 +403,7 @@ def tab_entities(api_key: str) -> None:
                     lines.append(f"- {word} ({label}, confidence: {score:.1%})")
                     keywords.append(word.lower())
 
-                unique_keywords = []
-                seen = set()
-                for keyword in keywords:
-                    if keyword in seen:
-                        continue
-                    seen.add(keyword)
-                    unique_keywords.append(keyword)
+                unique_keywords = list(dict.fromkeys(keywords))
 
                 shown_keywords = unique_keywords[:MAX_DISPLAYED_KEYWORDS]
                 keyword_text = ", ".join(shown_keywords)
