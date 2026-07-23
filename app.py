@@ -292,7 +292,8 @@ def tab_summarization(api_key: str) -> None:
                 result = client.summarization(
                     article,
                     model="facebook/bart-large-cnn",
-                    parameters={"min_length": min_length, "max_length": max_length},
+                    min_length=min_length,
+                    max_length=max_length,
                 )
                 show_result(result.summary_text)
             except Exception as exc:
