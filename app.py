@@ -1,5 +1,6 @@
 import html
 import os
+from typing import Any
 
 import streamlit as st
 from huggingface_hub import InferenceClient
@@ -205,6 +206,19 @@ def show_error(message: str) -> None:
     )
 
 
+def _extract_summary_text(result: Any) -> str:
+    if isinstance(result, dict):
+        value = result.get("summary_text") or result.get("generated_text")
+        return str(value).strip() if value else ""
+    if isinstance(result, list) and result and isinstance(result[0], dict):
+        value = result[0].get("summary_text") or result[0].get("generated_text")
+        return str(value).strip() if value else ""
+    summary = getattr(result, "summary_text", None)
+    if summary:
+        return str(summary).strip()
+    return ""
+
+
 def tab_sentiment(api_key: str) -> None:
     st.markdown("Classify text by **sentiment** or **emotion**.")
     mode = st.selectbox(
@@ -260,9 +274,10 @@ def tab_summarization(api_key: str) -> None:
                     article,
                     model="facebook/bart-large-cnn",
                 )
-                summary = getattr(result, "summary_text", None)
-                if summary is None:
-                    summary = str(result)
+                summary = _extract_summary_text(result)
+                if not summary:
+                    st.warning("No summary was generated. Please try again or check your input text.")
+                    return
                 show_result(summary)
             except Exception as exc:
                 _handle_hf_error(exc)
