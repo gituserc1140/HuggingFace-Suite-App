@@ -9,11 +9,6 @@ GITHUB_REPO_URL = "https://github.com/gituserc1140/HuggingFace-Suite-App"
 GITHUB_SPONSORS_URL = "https://github.com/sponsors/gituserc1140"
 LOW_CONFIDENCE_THRESHOLD = 0.35
 MAX_DISPLAYED_KEYWORDS = 15
-SUMMARY_LENGTH_SETTINGS = {
-    "Short": (20, 60),
-    "Medium": (40, 110),
-    "Detailed": (80, 180),
-}
 TRANSLATION_TARGET_MODELS = {
     "French": "Helsinki-NLP/opus-mt-en-fr",
     "Spanish": "Helsinki-NLP/opus-mt-en-es",
@@ -260,46 +255,6 @@ def tab_generation(api_key: str) -> None:
                 _handle_hf_error(exc)
 
 
-def tab_summarization(api_key: str) -> None:
-    st.markdown("Generate a concise **summary** of a longer passage.")
-    length_choice = st.select_slider(
-        "Summary length",
-        options=["Short", "Medium", "Detailed"],
-        value="Medium",
-        key="sum_length",
-    )
-    article = st.text_area(
-        "Paste your article or text:",
-        (
-            "The Amazon rainforest, also known as Amazonia, is a moist broadleaf tropical rainforest "
-            "in the Amazon biome that covers most of the Amazon basin of South America. "
-            "This basin encompasses 7,000,000 km2 (2,700,000 sq mi), of which "
-            "5,500,000 km2 (2,100,000 sq mi) are covered by the rainforest. "
-            "This region includes territory belonging to nine nations and 3,344 formally acknowledged "
-            "indigenous territories."
-        ),
-        height=180,
-        key="sum_input",
-    )
-    if st.button("Summarise", key="sum_btn"):
-        if not article.strip():
-            st.warning("Please paste some text first.")
-            return
-        with st.spinner("Summarising…"):
-            try:
-                client = make_client(api_key)
-                min_length, max_length = SUMMARY_LENGTH_SETTINGS[length_choice]
-                result = client.summarization(
-                    article,
-                    model="facebook/bart-large-cnn",
-                    min_length=min_length,
-                    max_length=max_length,
-                )
-                show_result(result.summary_text)
-            except Exception as exc:
-                _handle_hf_error(exc)
-
-
 def tab_translation(api_key: str) -> None:
     st.markdown("Translate text **from English** into your selected target language.")
     target_language = st.selectbox(
@@ -478,12 +433,12 @@ def main() -> None:
         st.stop()
 
     # ── Task tabs ──────────────────────────────────────────────────
-    tabs = st.tabs(["😊 Sentiment", "📝 Summarise", "🌐 Translate", "❓ Q&A", "🏷️ Entities"])
+    tabs = st.tabs(["😊 Sentiment", "✍️ Generate", "🌐 Translate", "❓ Q&A", "🏷️ Entities"])
 
     with tabs[0]:
         tab_sentiment(api_key)
     with tabs[1]:
-        tab_summarization(api_key)
+        tab_generation(api_key)
     with tabs[2]:
         tab_translation(api_key)
     with tabs[3]:
