@@ -348,9 +348,13 @@ def tab_qa(api_key: str) -> None:
                     context=context,
                     model="deepset/roberta-base-squad2",
                 )
-                answer = (result.answer or "").strip()
+                raw_answer = getattr(result, "answer", None)
+                if raw_answer is None:
+                    st.warning("No strong answer was found in the provided context.")
+                    return
+                answer = str(raw_answer).strip()
                 confidence = float(getattr(result, "score", 0.0))
-                if not answer:
+                if answer == "":
                     st.warning("No strong answer was found in the provided context.")
                     return
                 if confidence < LOW_CONFIDENCE_THRESHOLD:
@@ -397,15 +401,14 @@ def tab_entities(api_key: str) -> None:
                     if not word:
                         continue
                     lines.append(f"- {word} ({label}, confidence: {score:.1%})")
-                    keywords.append(word)
+                    keywords.append(word.lower())
 
                 unique_keywords = []
                 seen = set()
                 for keyword in keywords:
-                    normalized = keyword.lower()
-                    if normalized in seen:
+                    if keyword in seen:
                         continue
-                    seen.add(normalized)
+                    seen.add(keyword)
                     unique_keywords.append(keyword)
 
                 keyword_text = ", ".join(unique_keywords[:MAX_DISPLAYED_KEYWORDS])

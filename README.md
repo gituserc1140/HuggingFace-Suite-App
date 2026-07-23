@@ -11,7 +11,7 @@ A **Streamlit** web app that gives you a suite of NLP tools powered by the [Hugg
 
 | Tab | Task | Model |
 |-----|------|-------|
-| 😊 Sentiment | Sentiment or emotion classification | `distilbert-base-uncased-finetuned-sst-2-english`, `j-hartmann/emotion-english-distilroberta-base` |
+| 😊 Sentiment | Positive/negative sentiment or emotion classification (mode-dependent) | `distilbert-base-uncased-finetuned-sst-2-english`, `j-hartmann/emotion-english-distilroberta-base` |
 | 📝 Summarise | Condense long articles (short / medium / detailed) | `facebook/bart-large-cnn` |
 | 🌐 Translate | English → French / Spanish / German / Italian / Portuguese | `Helsinki-NLP/opus-mt-en-*` |
 | ❓ Q&A | Answer questions from a passage with confidence | `deepset/roberta-base-squad2` |
