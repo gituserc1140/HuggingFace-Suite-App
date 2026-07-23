@@ -351,7 +351,7 @@ def tab_qa(api_key: str) -> None:
                 raw_answer = getattr(result, "answer", "")
                 answer = str(raw_answer).strip() if raw_answer is not None else ""
                 confidence = float(getattr(result, "score", 0.0))
-                if answer == "":
+                if not answer:
                     st.warning("No strong answer was found in the provided context.")
                     return
                 if confidence < LOW_CONFIDENCE_THRESHOLD:
@@ -400,7 +400,13 @@ def tab_entities(api_key: str) -> None:
                     lines.append(f"- {word} ({label}, confidence: {score:.1%})")
                     keywords.append(word.lower())
 
-                unique_keywords = list(dict.fromkeys(keywords))
+                unique_keywords = []
+                seen_keywords = set()
+                for keyword in keywords:
+                    if keyword in seen_keywords:
+                        continue
+                    seen_keywords.add(keyword)
+                    unique_keywords.append(keyword)
                 shown_keywords = unique_keywords[:MAX_DISPLAYED_KEYWORDS]
                 keyword_text = ", ".join(shown_keywords)
                 details = "\n".join(lines)
