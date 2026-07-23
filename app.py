@@ -1,5 +1,6 @@
 import html
 import os
+from typing import Any
 
 import streamlit as st
 from huggingface_hub import InferenceClient
@@ -9,11 +10,6 @@ GITHUB_REPO_URL = "https://github.com/gituserc1140/HuggingFace-Suite-App"
 GITHUB_SPONSORS_URL = "https://github.com/sponsors/gituserc1140"
 LOW_CONFIDENCE_THRESHOLD = 0.35
 MAX_DISPLAYED_KEYWORDS = 15
-SUMMARY_LENGTH_SETTINGS = {
-    "Short": (20, 60),
-    "Medium": (40, 110),
-    "Detailed": (80, 180),
-}
 TRANSLATION_TARGET_MODELS = {
     "French": "Helsinki-NLP/opus-mt-en-fr",
     "Spanish": "Helsinki-NLP/opus-mt-en-es",
@@ -210,6 +206,19 @@ def show_error(message: str) -> None:
     )
 
 
+def _extract_summary_text(result: Any) -> str:
+    if isinstance(result, dict):
+        value = result.get("summary_text") or result.get("generated_text")
+        return str(value).strip() if value else ""
+    if isinstance(result, list) and result and isinstance(result[0], dict):
+        value = result[0].get("summary_text") or result[0].get("generated_text")
+        return str(value).strip() if value else ""
+    summary = getattr(result, "summary_text", None)
+    if summary:
+        return str(summary).strip()
+    return ""
+
+
 def tab_sentiment(api_key: str) -> None:
     st.markdown("Classify text by **sentiment** or **emotion**.")
     mode = st.selectbox(
@@ -239,35 +248,8 @@ def tab_sentiment(api_key: str) -> None:
                 _handle_hf_error(exc)
 
 
-def tab_generation(api_key: str) -> None:
-    st.markdown("Continue a prompt with **text generation** using GPT-2.")
-    prompt = st.text_area("Enter a prompt:", "Once upon a time in a galaxy far away,", key="gen_input")
-    max_tokens = st.slider("Max new tokens", 20, 200, 80, key="gen_tokens")
-    if st.button("Generate Text", key="gen_btn"):
-        if not prompt.strip():
-            st.warning("Please enter a prompt first.")
-            return
-        with st.spinner("Generating…"):
-            try:
-                client = make_client(api_key)
-                generated = client.text_generation(
-                    prompt,
-                    model="gpt2",
-                    max_new_tokens=max_tokens,
-                )
-                show_result(generated)
-            except Exception as exc:
-                _handle_hf_error(exc)
-
-
 def tab_summarization(api_key: str) -> None:
     st.markdown("Generate a concise **summary** of a longer passage.")
-    length_choice = st.select_slider(
-        "Summary length",
-        options=["Short", "Medium", "Detailed"],
-        value="Medium",
-        key="sum_length",
-    )
     article = st.text_area(
         "Paste your article or text:",
         (
@@ -288,14 +270,15 @@ def tab_summarization(api_key: str) -> None:
         with st.spinner("Summarising…"):
             try:
                 client = make_client(api_key)
-                min_length, max_length = SUMMARY_LENGTH_SETTINGS[length_choice]
                 result = client.summarization(
                     article,
                     model="facebook/bart-large-cnn",
-                    min_length=min_length,
-                    max_length=max_length,
                 )
-                show_result(result.summary_text)
+                summary = _extract_summary_text(result)
+                if not summary:
+                    st.warning("No summary was generated. Please try again or check your input text.")
+                    return
+                show_result(summary)
             except Exception as exc:
                 _handle_hf_error(exc)
 
