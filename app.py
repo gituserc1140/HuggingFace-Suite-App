@@ -234,23 +234,36 @@ def tab_sentiment(api_key: str) -> None:
                 _handle_hf_error(exc)
 
 
-def tab_generation(api_key: str) -> None:
-    st.markdown("Continue a prompt with **text generation** using GPT-2.")
-    prompt = st.text_area("Enter a prompt:", "Once upon a time in a galaxy far away,", key="gen_input")
-    max_tokens = st.slider("Max new tokens", 20, 200, 80, key="gen_tokens")
-    if st.button("Generate Text", key="gen_btn"):
-        if not prompt.strip():
-            st.warning("Please enter a prompt first.")
+def tab_summarization(api_key: str) -> None:
+    st.markdown("Generate a concise **summary** of a longer passage.")
+    article = st.text_area(
+        "Paste your article or text:",
+        (
+            "The Amazon rainforest, also known as Amazonia, is a moist broadleaf tropical rainforest "
+            "in the Amazon biome that covers most of the Amazon basin of South America. "
+            "This basin encompasses 7,000,000 km2 (2,700,000 sq mi), of which "
+            "5,500,000 km2 (2,100,000 sq mi) are covered by the rainforest. "
+            "This region includes territory belonging to nine nations and 3,344 formally acknowledged "
+            "indigenous territories."
+        ),
+        height=180,
+        key="sum_input",
+    )
+    if st.button("Summarise", key="sum_btn"):
+        if not article.strip():
+            st.warning("Please paste some text first.")
             return
-        with st.spinner("Generating…"):
+        with st.spinner("Summarising…"):
             try:
                 client = make_client(api_key)
-                generated = client.text_generation(
-                    prompt,
-                    model="gpt2",
-                    max_new_tokens=max_tokens,
+                result = client.summarization(
+                    article,
+                    model="facebook/bart-large-cnn",
                 )
-                show_result(generated)
+                summary = getattr(result, "summary_text", None)
+                if summary is None:
+                    summary = str(result)
+                show_result(summary)
             except Exception as exc:
                 _handle_hf_error(exc)
 
@@ -433,12 +446,12 @@ def main() -> None:
         st.stop()
 
     # ── Task tabs ──────────────────────────────────────────────────
-    tabs = st.tabs(["😊 Sentiment", "✍️ Generate", "🌐 Translate", "❓ Q&A", "🏷️ Entities"])
+    tabs = st.tabs(["😊 Sentiment", "📝 Summarise", "🌐 Translate", "❓ Q&A", "🏷️ Entities"])
 
     with tabs[0]:
         tab_sentiment(api_key)
     with tabs[1]:
-        tab_generation(api_key)
+        tab_summarization(api_key)
     with tabs[2]:
         tab_translation(api_key)
     with tabs[3]:
