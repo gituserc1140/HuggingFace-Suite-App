@@ -14,7 +14,7 @@ SUMMARY_LENGTH_SETTINGS = {
     "Medium": (40, 110),
     "Detailed": (80, 180),
 }
-TRANSLATION_LANGUAGE_MODELS = {
+TRANSLATION_TARGET_MODELS = {
     "French": "Helsinki-NLP/opus-mt-en-fr",
     "Spanish": "Helsinki-NLP/opus-mt-en-es",
     "German": "Helsinki-NLP/opus-mt-en-de",
@@ -304,7 +304,7 @@ def tab_translation(api_key: str) -> None:
     st.markdown("Translate text **from English** into your selected target language.")
     target_language = st.selectbox(
         "Target language",
-        list(TRANSLATION_LANGUAGE_MODELS.keys()),
+        list(TRANSLATION_TARGET_MODELS.keys()),
         index=0,
         key="tr_lang",
     )
@@ -316,7 +316,7 @@ def tab_translation(api_key: str) -> None:
         with st.spinner("Translating…"):
             try:
                 client = make_client(api_key)
-                model = TRANSLATION_LANGUAGE_MODELS[target_language]
+                model = TRANSLATION_TARGET_MODELS[target_language]
                 result = client.translation(text, model=model)
                 show_result(result.translation_text)
             except Exception as exc:
@@ -405,7 +405,7 @@ def tab_entities(api_key: str) -> None:
                 keyword_text = ", ".join(shown_keywords)
                 details = "\n".join(lines)
                 if keyword_text:
-                    if len(unique_keywords) > len(shown_keywords):
+                    if len(unique_keywords) > MAX_DISPLAYED_KEYWORDS:
                         keyword_text += f" (showing first {MAX_DISPLAYED_KEYWORDS})"
                     details += f"\n\nKeywords: {keyword_text}"
                 show_result(details)
