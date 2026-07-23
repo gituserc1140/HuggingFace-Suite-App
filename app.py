@@ -370,17 +370,15 @@ def main() -> None:
         st.stop()
 
     # ── Task tabs ──────────────────────────────────────────────────
-    tabs = st.tabs(["😊 Sentiment", "✍️ Generation", "📝 Summarise", "🌐 Translate", "❓ Q&A"])
+    tabs = st.tabs(["😊 Sentiment", "📝 Summarise", "🌐 Translate", "❓ Q&A"])
 
     with tabs[0]:
         tab_sentiment(api_key)
     with tabs[1]:
-        tab_generation(api_key)
-    with tabs[2]:
         tab_summarization(api_key)
-    with tabs[3]:
+    with tabs[2]:
         tab_translation(api_key)
-    with tabs[4]:
+    with tabs[3]:
         tab_qa(api_key)
 
 
